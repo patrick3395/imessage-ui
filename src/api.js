@@ -21,3 +21,11 @@ export function sendMessage(to, message) {
     }
   );
 }
+
+export function fetchConversations() {
+  return axios
+    .get(`${API_BASE}/conversations`, {
+      headers: { Authorization: `Bearer ${API_TOKEN}` },
+    })
+    .then((res) => res.data);
+}
