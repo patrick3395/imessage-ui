@@ -1,35 +1,51 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { useState } from "react";
+import { sendMessage } from "./api";
+import "./App.css";
 
-function App() {
-  const [count, setCount] = useState(0)
+export default function App() {
+  const [to, setTo] = useState("");
+  const [msg, setMsg] = useState("");
+  const [status, setStatus] = useState("");
+
+  const handleSend = async () => {
+    setStatus("Sending…");
+    try {
+      await sendMessage(to, msg);
+      setStatus("✅ Sent!");
+      setMsg("");
+    } catch (e) {
+      console.error(e);
+      setStatus("❌ " + (e.response?.data?.error || e.message));
+    }
+  };
 
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.jsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
-}
+    <div className="p-4 max-w-md mx-auto">
+      <h1 className="text-2xl font-bold mb-4">iMessage Admin</h1>
 
-export default App
+      <input
+        className="border p-2 w-full mb-2"
+        placeholder="+1234567890"
+        value={to}
+        onChange={(e) => setTo(e.target.value)}
+      />
+
+      <textarea
+        className="border p-2 w-full mb-2"
+        rows="4"
+        placeholder="Your message…"
+        value={msg}
+        onChange={(e) => setMsg(e.target.value)}
+      />
+
+      <button
+        className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+        onClick={handleSend}
+      >
+        Send
+      </button>
+
+      {status && <p className="mt-4 text-sm">{status}</p>}
+    </div>
+  );
+}
