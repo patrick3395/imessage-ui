@@ -7,19 +7,20 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': {
-        target: 'http://216.14.174.217:5000',
+        target: 'https://noble-api-gateway-production.up.railway.app',
         changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api/, ''),
-        secure: false,
+        secure: true,
+        // Don't rewrite the path - Railway expects /api prefix
+        rewrite: (path) => path,
         configure: (proxy, options) => {
           proxy.on('error', (err, req, res) => {
             console.log('proxy error', err);
           });
           proxy.on('proxyReq', (proxyReq, req, res) => {
-            console.log('Sending Request to the Target:', req.method, req.url);
+            console.log('Sending Request to Railway:', req.method, req.url);
           });
           proxy.on('proxyRes', (proxyRes, req, res) => {
-            console.log('Received Response from the Target:', proxyRes.statusCode, req.url);
+            console.log('Received Response from Railway:', proxyRes.statusCode, req.url);
           });
         },
       }

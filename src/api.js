@@ -1,11 +1,7 @@
 import axios from "axios";
 
 // Determine base URL based on environment
-export const API_BASE =
-  import.meta.env.MODE === "development"
-    ? "http://localhost:3000/api"  // For local development
-    : "https://noble-api-gateway-production.up.railway.app/api";
-
+export const API_BASE = "https://noble-api-gateway-production.up.railway.app/api";
 // Remove the old API_TOKEN - we'll use JWT tokens now
 // export const API_TOKEN = import.meta.env.VITE_API_TOKEN || "NOBLEIMESSAGE";
 

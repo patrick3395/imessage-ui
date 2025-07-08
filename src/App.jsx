@@ -226,6 +226,19 @@ export default function MessagingApp() {
     const saved = localStorage.getItem('done_conversations');
     return saved ? new Set(JSON.parse(saved)) : new Set();
   });
+
+  const [buckets, setBuckets] = useState(() => {
+    const saved = localStorage.getItem('conversation_buckets');
+    return saved ? JSON.parse(saved) : [
+      { id: 'open', name: 'Open', color: '#3b82f6' },
+      { id: 'done', name: 'Done', color: '#10b981' }
+    ];
+  });
+  const [conversationBuckets, setConversationBuckets] = useState(() => {
+    const saved = localStorage.getItem('conversation_bucket_assignments');
+    return saved ? JSON.parse(saved) : {};
+  });
+  const [showAddBucket, setShowAddBucket] = useState(false);
   
   // Message tracking
   const [messageHash, setMessageHash] = useState({});
@@ -587,6 +600,21 @@ export default function MessagingApp() {
     if (newMessage.trim() && selectedChat) {
       const messageToSend = newMessage.trim();
       setNewMessage("");
+
+      const tempMessage = {
+        id: `temp-${Date.now()}`,
+        body: messageToSend,
+        timestamp: new Date().toISOString(),
+        fromMe: true,
+        from: null,
+        chat_id: selectedChat,
+        is_read: true,
+        has_attachments: false,
+        isSending: true
+      };
+      
+      // Add to messages immediately
+      setMessages(prev => [...prev, tempMessage]);
       
       try {
         const selectedConvo = conversations.find(c => c.chat_id === selectedChat);
@@ -616,11 +644,18 @@ export default function MessagingApp() {
           // Force refresh messages after a delay
           setTimeout(() => {
             loadMessages(selectedChat, true);
-          }, 3000);
-          
+            // Remove temporary message
+            setMessages(prev => prev.filter(msg => !msg.id.startsWith('temp-')));
+          }, 2000);
+
           setTimeout(() => {
             loadMessages(selectedChat, true);
-          }, 5000);
+          }, 4000);
+
+          // Add immediate refresh too
+          setTimeout(() => {
+            loadMessages(selectedChat, true);
+          }, 500);
           
           // Scroll to bottom
           setTimeout(scrollToBottom, 1000);
@@ -1407,60 +1442,74 @@ export default function MessagingApp() {
                           <p style={{ margin: 0, fontSize: '15px', lineHeight: '1.5' }}>
                             {message.body || 'No message content'}
                           </p>
+                          {message.isSending && (
+                            <div style={{
+                              fontSize: '10px',
+                              color: message.fromMe ? 'rgba(255,255,255,0.7)' : '#94a3b8',
+                              marginTop: '4px'
+                            }}>
+                              Sending...
+                            </div>
+                          )}
                         </div>
                         
-                        {/* Comment indicator */}
+                          {/* Comment indicator */}
                         {hasNotes && (
-                          <div style={{
-                            position: 'absolute',
-                            bottom: '-8px',
-                            right: message.fromMe ? '8px' : 'auto',
-                            left: message.fromMe ? 'auto' : '8px',
-                            backgroundColor: '#f59e0b',
-                            color: 'white',
-                            fontSize: '10px',
-                            fontWeight: '600',
-                            padding: '2px 6px',
-                            borderRadius: '10px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '2px'
-                          }}>
-                            <MessageSquare size={10} />
-                            {messageNotes[message.id].length}
-                          </div>
-                        )}
-                        
-                        {/* Add comment button */}
-                        {hoveredMessage === message.id && (
                           <button
                             onClick={() => setSelectedMessageForNote(message.id)}
                             style={{
                               position: 'absolute',
-                              top: '50%',
-                              transform: 'translateY(-50%)',
-                              right: message.fromMe ? '-32px' : 'auto',
-                              left: message.fromMe ? 'auto' : '-32px',
-                              width: '24px',
-                              height: '24px',
-                              borderRadius: '50%',
-                              backgroundColor: '#f59e0b',
-                              border: 'none',
+                              bottom: '-20px',
+                              left: message.fromMe ? 'auto' : '12px',
+                              right: message.fromMe ? '12px' : 'auto',
+                              padding: '2px 8px',
+                              borderRadius: '12px',
+                              backgroundColor: '#fef3c7',
+                              border: '1px solid #fbbf24',
                               cursor: 'pointer',
                               display: 'flex',
                               alignItems: 'center',
-                              justifyContent: 'center',
-                              boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
+                              gap: '4px',
+                              fontSize: '11px',
+                              color: '#92400e',
+                              fontWeight: '500'
+                            }}
+                          >
+                            <MessageSquare size={12} />
+                            {messageNotes[message.id].length} {messageNotes[message.id].length === 1 ? 'comment' : 'comments'}
+                          </button>
+                        )}
+                        
+                        {/* Add comment button */}
+                        {hoveredMessage === message.id && !messageNotes[message.id]?.length && (
+                          <button
+                            onClick={() => setSelectedMessageForNote(message.id)}
+                            style={{
+                              position: 'absolute',
+                              bottom: '-20px',
+                              left: message.fromMe ? 'auto' : '12px',
+                              right: message.fromMe ? '12px' : 'auto',
+                              padding: '2px 8px',
+                              borderRadius: '12px',
+                              backgroundColor: 'rgba(0, 0, 0, 0.05)',
+                              border: '1px solid rgba(0, 0, 0, 0.1)',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                              fontSize: '11px',
+                              color: '#64748b',
                               transition: 'all 0.2s'
                             }}
                             onMouseEnter={(e) => {
-                              e.target.style.transform = 'translateY(-50%) scale(1.1)';
+                              e.target.style.backgroundColor = 'rgba(0, 0, 0, 0.1)';
                             }}
                             onMouseLeave={(e) => {
-                              e.target.style.transform = 'translateY(-50%) scale(1)';
+                              e.target.style.backgroundColor = 'rgba(0, 0, 0, 0.05)';
                             }}
                           >
-                            <Plus size={14} color="white" />
+                            <MessageSquare size={12} />
+                            Comment
                           </button>
                         )}
                       </div>
