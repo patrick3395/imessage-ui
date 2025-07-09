@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Imessage UI</string>
+    <string name="title_activity_main">Imessage UI</string>
+    <string name="package_name">com.noble.imessage</string>
+    <string name="custom_url_scheme">com.noble.imessage</string>
+</resources>

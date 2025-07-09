@@ -1,0 +1,10 @@
+{
+  "appId": "com.imessageui.app",
+  "appName": "iMessage UI",
+  "webDir": "build",
+  "server": {
+    "androidScheme": "https",
+    "cleartext": true,
+    "allowNavigation": ["*"]
+  }
+}

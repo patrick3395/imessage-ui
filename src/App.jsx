@@ -1,4 +1,5 @@
-import { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, Component } from "react";
+//import { useState, useEffect, useRef } from "react";
 import { Search, MessageCircle, Phone, Video, Edit3, Archive, Settings, MoreVertical, Check, CheckCheck, Plus, Send, Paperclip, Smile, ArrowLeft, Info, Users, MessageSquare, X, ChevronDown, Edit2, Trash2, LogOut, User } from "lucide-react";
 import { 
   fetchConversations, 
@@ -17,6 +18,35 @@ import {
   getCurrentUser
 } from "./api";
 
+
+// Error Boundary Component
+class ErrorBoundary extends Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError(error) {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    console.error('App Error:', error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{ padding: '20px', textAlign: 'center' }}>
+          <h2>Something went wrong</h2>
+          <button onClick={() => window.location.reload()}>Reload Page</button>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
 // Auth Component
 function AuthScreen({ onLogin }) {
   const [isLogin, setIsLogin] = useState(true);
@@ -193,7 +223,7 @@ function AuthScreen({ onLogin }) {
 }
 
 // Main App Component
-export default function MessagingApp() {
+function MessagingAppCore() {
   const [isLoggedIn, setIsLoggedIn] = useState(isAuthenticated());
   const [conversations, setConversations] = useState([]);
   const [selectedChat, setSelectedChat] = useState(null);
@@ -399,10 +429,58 @@ export default function MessagingApp() {
       const newHash = result.hash;
       const hasChanged = result.changed;
       
+      console.log("📊 Server returned", msgs.length, "messages");
+      console.log("📊 Last message from server:", msgs[msgs.length - 1]);
+      console.log("📊 Changed?", hasChanged, "Hash:", newHash);
+      
       // Only update state if messages have changed
       if (hasChanged || forceUpdate || messageHash[chatId] !== newHash) {
         console.log("📝 Messages changed, updating UI");
-        setMessages(msgs);
+        console.log("New messages count:", msgs.length);
+        console.log("Last 3 messages:", msgs.slice(-3).map(m => ({
+          id: m.id,
+          body: m.body?.substring(0, 30),
+          fromMe: m.fromMe
+        })));
+        
+        // CHECK IF YOUR NEW MESSAGE IS IN THE msgs ARRAY
+        console.log("🔍 All message IDs:", msgs.map(m => m.id));
+        console.log("🔍 Messages from me:", msgs.filter(m => m.fromMe).length);
+        
+        // Keep temporary messages that don't have a matching real message yet
+        const tempMessages = messages.filter(msg => {
+          if (msg.id && msg.id.toString().startsWith('temp-')) {
+            const tempBody = msg.body.toLowerCase().trim();
+            console.log(`🔍 Checking temp message: "${tempBody}"`);
+            
+            // Check if this temp message now exists as a real message
+            const realExists = msgs.some(realMsg => {
+              if (realMsg.fromMe && realMsg.body) {
+                const realBody = realMsg.body.toLowerCase().trim();
+                const matches = realBody === tempBody;
+                if (matches) {
+                  console.log(`✅ Found real message for temp: "${tempBody}"`);
+                }
+                return matches;
+              }
+              return false;
+            });
+            
+            const shouldKeep = !realExists;
+            console.log(`${shouldKeep ? '📌 Keeping' : '🗑️ Removing'} temp message: "${tempBody}"`);
+            return shouldKeep;
+          }
+          return false;
+        });
+        
+        console.log(`📌 Keeping ${tempMessages.length} temporary messages`);
+        
+        // Combine server messages with remaining temp messages
+        const allMessages = [...msgs, ...tempMessages].sort((a, b) => 
+          new Date(a.timestamp) - new Date(b.timestamp)
+        );
+        
+        setMessages(allMessages);
         setMessageHash(prev => ({ ...prev, [chatId]: newHash }));
         
         // Only load notes if messages changed
@@ -411,6 +489,7 @@ export default function MessagingApp() {
         }
       } else {
         console.log("✅ Messages unchanged, skipping update");
+        console.log("Current message count:", messages.length);
       }
       
     } catch (error) {
@@ -479,7 +558,7 @@ export default function MessagingApp() {
       // Set up polling for real-time updates
       const messageInterval = setInterval(() => {
         loadMessages(selectedChat);
-      }, 2000); // Poll every 2 seconds
+      }, 10000); // Poll every 10 seconds instead of 2
       
       return () => clearInterval(messageInterval);
     }
@@ -504,9 +583,15 @@ export default function MessagingApp() {
     isInitialLoadRef.current = true;
     prevMessageCountRef.current = 0;
   }, [selectedChat]);
-
+  // Debug messages state
+  useEffect(() => {
+    console.log("Messages state updated:", messages.length, "messages");
+    if (messages.length > 0) {
+      console.log("Last message in state:", messages[messages.length - 1]);
+    }
+  }, [messages]);
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    messagesEndRef.current?.scrollIntoView({ behavior: "auto" });
   };
 
   // Handle note creation with author
@@ -642,23 +727,31 @@ export default function MessagingApp() {
           console.log("✅ Message sent, waiting for it to appear...");
           
           // Force refresh messages after a delay
+          // Force refresh messages after a delay
           setTimeout(() => {
-            loadMessages(selectedChat, true);
-            // Remove temporary message
-            setMessages(prev => prev.filter(msg => !msg.id.startsWith('temp-')));
+            if (selectedChat) {
+              loadMessages(selectedChat, true);
+            }
+          }, 1000);
+
+          setTimeout(() => {
+            if (selectedChat) {
+              loadMessages(selectedChat, true);
+            }
+          }, 2500);
+
+          setTimeout(() => {
+            if (selectedChat) {
+              loadMessages(selectedChat, true);
+            }
+          }, 5000);
+
+          // Scroll after message loads
+          setTimeout(() => {
+            if (messagesEndRef.current) {
+              scrollToBottom();
+            }
           }, 2000);
-
-          setTimeout(() => {
-            loadMessages(selectedChat, true);
-          }, 4000);
-
-          // Add immediate refresh too
-          setTimeout(() => {
-            loadMessages(selectedChat, true);
-          }, 500);
-          
-          // Scroll to bottom
-          setTimeout(scrollToBottom, 1000);
           
           // Refresh conversations
           setTimeout(async () => {
@@ -1397,7 +1490,11 @@ export default function MessagingApp() {
               padding: '24px',
               backgroundColor: '#fafbfc'
             }}>
+
+              {console.log("About to render", messages.length, "messages")}
+              {messages.length === 0 && <div>No messages to display</div>}                
               {messages.map((message, index) => {
+                console.log("Rendering message:", message.id, message.body?.substring(0, 20));
                 const showSenderInfo = selectedConversation?.is_group && !message.fromMe && message.from;
                 const prevMessage = index > 0 ? messages[index - 1] : null;
                 const showSenderName = showSenderInfo && (!prevMessage || prevMessage.from !== message.from || prevMessage.fromMe);
@@ -2085,3 +2182,10 @@ export default function MessagingApp() {
     </div>
   );
 }
+export default function MessagingApp() {
+  return (
+    <ErrorBoundary>
+      <MessagingAppCore />
+    </ErrorBoundary>
+  );
+  }
