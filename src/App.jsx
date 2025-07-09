@@ -1537,7 +1537,24 @@ function MessagingAppCore() {
                           boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)'
                         }}>
                           <p style={{ margin: 0, fontSize: '15px', lineHeight: '1.5' }}>
-                            {message.body || 'No message content'}
+                            {message.has_attachments && message.attachments && message.attachments.length > 0 ? (
+                              message.attachments.map((att, idx) =>
+                                att.type.startsWith('image/') ? (
+                                  <img
+                                    key={idx}
+                                    src={att.url}
+                                    alt="attachment"
+                                    style={{ maxWidth: 200, borderRadius: 8, marginTop: 8 }}
+                                  />
+                                ) : (
+                                  <a key={idx} href={att.url} target="_blank" rel="noopener noreferrer">
+                                    Download Attachment
+                                  </a>
+                                )
+                              )
+                            ) : (
+                              <p>{message.body}</p>
+                            )}
                           </p>
                           {message.isSending && (
                             <div style={{
